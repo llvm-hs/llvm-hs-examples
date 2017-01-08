@@ -1,0 +1,16 @@
+Name:                   examples
+Version:                1.0.0.0
+Cabal-version:          >=1.8
+Tested-with:            GHC >= 7.8
+Build-type:             Simple
+Synopsis:               Examples using the llvm-hs library
+Description:            Examples using the llvm-hs library
+
+Executable basic
+  Main-is:              Main.hs
+  hs-source-dirs:       basic
+  build-depends:        
+    base               >= 4.7,
+    mtl                >= 2.2,
+    llvm-general       >= 3.9,
+    llvm-general-pure  >= 3.9

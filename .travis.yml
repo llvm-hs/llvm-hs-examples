@@ -1,0 +1,26 @@
+language: haskell
+
+branches:
+  only:
+    - master
+
+sudo: false
+
+cache:
+  directories:
+    - $HOME/.stack/
+
+before_install:
+  - mkdir -p ~/.local/bin
+  - export PATH=~/.local/bin:$PATH
+  - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+  - chmod a+x ~/.local/bin/stack
+
+install:
+  - stack setup
+  - stack build --only-snapshot
+
+script:
+  - git --version
+  - stack --version
+  - stack build 
