@@ -6,6 +6,12 @@ branches:
 
 sudo: false
 
+env:
+  global:
+    - GCC=gcc-5
+    - GXX=g++-5
+    - LLVM_VER=3.9.1
+
 cache:
   directories:
     - $HOME/.stack/
@@ -17,6 +23,17 @@ before_install:
   - chmod a+x ~/.local/bin/stack
 
 install:
+  - curl https://cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.tar.gz | tar -xzf - -C $HOME
+  - export PATH=$HOME/cmake-3.6.1-Linux-x86_64/bin:$PATH
+  - curl http://releases.llvm.org/${LLVM_VER}/llvm-${LLVM_VER}.src.tar.xz | tar -xJf - -C $HOME
+  - rsync -ac $HOME/llvm-${LLVM_VER}.src/ $HOME/llvm-src
+  - cd $HOME/llvm-src
+  - mkdir -p build && cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/llvm-build -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_TARGETS_TO_BUILD=X86 ..
+  - make install -j3
+  - cd $TRAVIS_BUILD_DIR
+  - ln -s $HOME/llvm-build/bin/llvm-config $HOME/bin/llvm-config
+  - llvm-config --version
   - stack setup
   - stack build --only-snapshot
 
