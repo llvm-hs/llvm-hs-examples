@@ -6,9 +6,18 @@ Build-type:             Simple
 Synopsis:               Examples using the llvm-hs library
 Description:            Examples using the llvm-hs library
 
-Executable basic
+executable basic
   Main-is:              Main.hs
   hs-source-dirs:       basic
+  build-depends:        
+    base               >= 4.7,
+    mtl                >= 2.2,
+    llvm-general       >= 3.9,
+    llvm-general-pure  >= 3.9
+
+executable orc
+  Main-is:              Main.hs
+  hs-source-dirs:       orc
   build-depends:        
     base               >= 4.7,
     mtl                >= 2.2,
