@@ -1,4 +1,5 @@
-language: haskell
+language: c
+sudo: false
 
 branches:
   only:
