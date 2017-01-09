@@ -1,12 +1,6 @@
 language: c
 sudo: false
 
-branches:
-  only:
-    - master
-
-sudo: false
-
 env:
   global:
     - GCC=gcc-5
