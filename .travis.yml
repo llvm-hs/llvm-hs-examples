@@ -16,6 +16,10 @@ before_install:
   - export PATH=~/.local/bin:$PATH
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
   - chmod a+x ~/.local/bin/stack
+  - mkdir -p $HOME/bin
+  - export PATH=$HOME/bin:$PATH
+  - export CC=/usr/bin/$GCC
+  - export CXX=/usr/bin/$GXX
 
 addons: 
   apt: 
