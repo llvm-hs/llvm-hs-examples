@@ -17,6 +17,15 @@ before_install:
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
   - chmod a+x ~/.local/bin/stack
 
+addons: 
+  apt: 
+    packages: 
+      - gcc-5
+      - g++-5
+    sources: 
+      - llvm-toolchain-precise
+      - ubuntu-toolchain-r-test
+
 install:
   - curl https://cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.tar.gz | tar -xzf - -C $HOME
   - export PATH=$HOME/cmake-3.6.1-Linux-x86_64/bin:$PATH
