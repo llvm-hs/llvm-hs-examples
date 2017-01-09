@@ -26,6 +26,7 @@ addons:
     packages: 
       - gcc-5
       - g++-5
+      - libgmp-dev
     sources: 
       - llvm-toolchain-precise
       - ubuntu-toolchain-r-test
