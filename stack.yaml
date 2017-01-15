@@ -4,14 +4,14 @@ packages:
 - '.'
 - location:
     git:    https://github.com/llvm-hs/llvm-hs.git
-    commit: 213a6a96de76d255a2876fd2efc0369f7375267a
+    commit: bf5f2f7871cde1f343cf9c46649b45c49cd87e92
   extra-dep: true
   subdirs:
-    - 'llvm-general'
-    - 'llvm-general-pure'
+    - 'llvm-hs'
+    - 'llvm-hs-pure'
 
 flags:
-  llvm-general:
+  llvm-hs:
     shared-llvm: true
 
 extra-package-dbs: []

@@ -1,10 +1,10 @@
 module Main where
 
-import LLVM.General.AST
-import qualified LLVM.General.AST as AST
-import LLVM.General.AST.Global
-import LLVM.General.Context
-import LLVM.General.Module
+import LLVM.AST
+import qualified LLVM.AST as AST
+import LLVM.AST.Global
+import LLVM.Context
+import LLVM.Module
 
 import Control.Monad.Except
 

@@ -2,18 +2,18 @@
 
 module Main where
 
-import LLVM.General.AST
-import LLVM.General.AST.Constant
-import qualified LLVM.General.AST as AST
-import LLVM.General.AST.Global
-import LLVM.General.Context
-import LLVM.General.Module
-import LLVM.General.Target
+import LLVM.AST
+import LLVM.AST.Constant
+import qualified LLVM.AST as AST
+import LLVM.AST.Global
+import LLVM.Context
+import LLVM.Module
+import LLVM.Target
 
-import LLVM.General.OrcJIT
-import LLVM.General.OrcJIT.IRCompileLayer (IRCompileLayer, withIRCompileLayer)
-import qualified LLVM.General.OrcJIT.IRCompileLayer as IRCompileLayer
-import qualified LLVM.General.OrcJIT.CompileOnDemandLayer as CODLayer
+import LLVM.OrcJIT
+import LLVM.OrcJIT.IRCompileLayer (IRCompileLayer, withIRCompileLayer)
+import qualified LLVM.OrcJIT.IRCompileLayer as IRCompileLayer
+import qualified LLVM.OrcJIT.CompileOnDemandLayer as CODLayer
 
 import Control.Monad.Except
 
@@ -47,7 +47,7 @@ module_ = defaultModule
   , moduleDefinitions = [defAdd]
   }
 
-withTestModule :: AST.Module -> (LLVM.General.Module.Module -> IO a) -> IO (Either String a)
+withTestModule :: AST.Module -> (LLVM.Module.Module -> IO a) -> IO (Either String a)
 withTestModule mod f = withContext $ \context -> runExceptT (withModuleFromAST context mod f)
 
 resolver :: MangledSymbol -> IRCompileLayer -> MangledSymbol -> IO JITSymbol
