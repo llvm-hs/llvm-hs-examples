@@ -55,7 +55,7 @@ resolver testFunc compileLayer symbol
   = IRCompileLayer.findSymbol compileLayer symbol True
 
 nullResolver :: MangledSymbol -> IO JITSymbol
-nullResolver s = putStrLn "nullresolver" >> return (JITSymbol 0 (JITSymbolFlags False False))
+nullResolver s = return (JITSymbol 0 (JITSymbolFlags False False))
 
 failInIO :: ExceptT String IO a -> IO a
 failInIO = either fail return <=< runExceptT
