@@ -1,17 +1,11 @@
-resolver: lts-7.8
-
+resolver: lts-8.14
 packages:
 - '.'
-- location:
-    git:    https://github.com/llvm-hs/llvm-hs.git
-    commit: f35803cf4e241cc7efcfbed9683fcea237f2107c
-  extra-dep: true
-  subdirs:
-    - 'llvm-hs'
-    - 'llvm-hs-pure'
+extra-deps:
+- llvm-hs-pure-4.1.0.0
+- llvm-hs-4.1.0.0
 
 flags:
   llvm-hs:
     shared-llvm: true
 
-extra-package-dbs: []

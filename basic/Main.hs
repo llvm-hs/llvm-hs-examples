@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import LLVM.AST
@@ -7,6 +9,7 @@ import LLVM.Context
 import LLVM.Module
 
 import Control.Monad.Except
+import Data.ByteString.Char8 as BS
 
 int :: Type
 int = IntegerType 32
@@ -42,10 +45,8 @@ module_ = defaultModule
 
 toLLVM :: AST.Module -> IO ()
 toLLVM mod = withContext $ \ctx -> do
-    errOrLLVM <- runExceptT $ withModuleFromAST ctx mod moduleLLVMAssembly
-    case errOrLLVM of
-      Left err -> putStrLn $ "error: " ++ err
-      Right llvm -> putStrLn llvm
+  llvm <- withModuleFromAST ctx mod moduleLLVMAssembly
+  BS.putStrLn llvm
 
 
 main :: IO ()

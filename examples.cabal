@@ -12,8 +12,9 @@ executable basic
   build-depends:        
     base               >= 4.7,
     mtl                >= 2.2,
-    llvm-hs            >= 4.0,
-    llvm-hs-pure       >= 4.0
+    bytestring         >= 0.10,
+    llvm-hs            >= 4.1,
+    llvm-hs-pure       >= 4.1
 
 executable orc
   Main-is:              Main.hs
@@ -21,5 +22,6 @@ executable orc
   build-depends:        
     base               >= 4.7,
     mtl                >= 2.2,
-    llvm-hs            >= 4.0,
-    llvm-hs-pure       >= 4.0
+    bytestring         >= 0.10,
+    llvm-hs            >= 4.1,
+    llvm-hs-pure       >= 4.1

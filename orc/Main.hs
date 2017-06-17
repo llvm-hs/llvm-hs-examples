@@ -1,14 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Main where
 
 import LLVM.AST
-import LLVM.AST.Constant
-import qualified LLVM.AST as AST
-import LLVM.AST.Global
-import LLVM.Context
 import LLVM.Module
 import LLVM.Target
+import LLVM.Context
+import LLVM.AST.Global
+import LLVM.AST.Constant
+import qualified LLVM.AST as AST
 
 import LLVM.OrcJIT
 import LLVM.OrcJIT.IRCompileLayer (IRCompileLayer, withIRCompileLayer)
@@ -16,6 +17,7 @@ import qualified LLVM.OrcJIT.IRCompileLayer as IRCompileLayer
 import qualified LLVM.OrcJIT.CompileOnDemandLayer as CODLayer
 
 import Control.Monad.Except
+import qualified Data.ByteString.Char8 as BS
 
 import Data.Int
 import Data.Word
@@ -47,8 +49,8 @@ module_ = defaultModule
   , moduleDefinitions = [defAdd]
   }
 
-withTestModule :: AST.Module -> (LLVM.Module.Module -> IO a) -> IO (Either String a)
-withTestModule mod f = withContext $ \context -> runExceptT (withModuleFromAST context mod f)
+withTestModule :: AST.Module -> (LLVM.Module.Module -> IO a) -> IO a
+withTestModule mod f = withContext $ \context -> withModuleFromAST context mod f
 
 resolver :: MangledSymbol -> IRCompileLayer -> MangledSymbol -> IO JITSymbol
 resolver testFunc compileLayer symbol
@@ -60,14 +62,14 @@ nullResolver s = return (JITSymbol 0 (JITSymbolFlags False False))
 failInIO :: ExceptT String IO a -> IO a
 failInIO = either fail return <=< runExceptT
 
-eagerJit :: AST.Module -> IO (Either String Int32)
+eagerJit :: AST.Module -> IO Int32
 eagerJit amod =
     withTestModule amod $ \mod ->
-      failInIO $ withHostTargetMachine $ \tm ->
+      withHostTargetMachine $ \tm ->
         withObjectLinkingLayer $ \objectLayer ->
           withIRCompileLayer objectLayer tm $ \compileLayer -> do
             asm <- moduleLLVMAssembly mod
-            putStrLn asm
+            BS.putStrLn asm
             testFunc <- IRCompileLayer.mangleSymbol compileLayer "add"
             IRCompileLayer.withModuleSet
               compileLayer
