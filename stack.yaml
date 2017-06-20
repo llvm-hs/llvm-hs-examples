@@ -1,9 +1,9 @@
-resolver: lts-8.14
+resolver: lts-8.19
 packages:
 - '.'
 extra-deps:
 - llvm-hs-pure-4.1.0.0
-- llvm-hs-4.1.0.0
+- llvm-hs-4.2.0
 
 flags:
   llvm-hs:

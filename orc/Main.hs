@@ -12,9 +12,6 @@ import LLVM.AST.Constant
 import qualified LLVM.AST as AST
 
 import LLVM.OrcJIT
-import LLVM.OrcJIT.IRCompileLayer (IRCompileLayer, withIRCompileLayer)
-import qualified LLVM.OrcJIT.IRCompileLayer as IRCompileLayer
-import qualified LLVM.OrcJIT.CompileOnDemandLayer as CODLayer
 
 import Control.Monad.Except
 import qualified Data.ByteString.Char8 as BS
@@ -52,9 +49,9 @@ module_ = defaultModule
 withTestModule :: AST.Module -> (LLVM.Module.Module -> IO a) -> IO a
 withTestModule mod f = withContext $ \context -> withModuleFromAST context mod f
 
-resolver :: MangledSymbol -> IRCompileLayer -> MangledSymbol -> IO JITSymbol
+resolver :: MangledSymbol -> IRCompileLayer l -> MangledSymbol -> IO JITSymbol
 resolver testFunc compileLayer symbol
-  = IRCompileLayer.findSymbol compileLayer symbol True
+  = findSymbol compileLayer symbol True
 
 nullResolver :: MangledSymbol -> IO JITSymbol
 nullResolver s = return (JITSymbol 0 (JITSymbolFlags False False))
@@ -70,14 +67,14 @@ eagerJit amod =
           withIRCompileLayer objectLayer tm $ \compileLayer -> do
             asm <- moduleLLVMAssembly mod
             BS.putStrLn asm
-            testFunc <- IRCompileLayer.mangleSymbol compileLayer "add"
-            IRCompileLayer.withModuleSet
+            testFunc <- mangleSymbol compileLayer "add"
+            withModuleSet
               compileLayer
               [mod]
               (SymbolResolver (resolver testFunc compileLayer) nullResolver) $
               \moduleSet -> do
-                mainSymbol <- IRCompileLayer.mangleSymbol compileLayer "add"
-                JITSymbol mainFn _ <- IRCompileLayer.findSymbol compileLayer mainSymbol True
+                mainSymbol <- mangleSymbol compileLayer "add"
+                JITSymbol mainFn _ <- findSymbol compileLayer mainSymbol True
                 result <- mkMain (castPtrToFunPtr (wordPtrToPtr mainFn))
                 return result
 
