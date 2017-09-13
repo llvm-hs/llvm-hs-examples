@@ -68,9 +68,9 @@ eagerJit amod =
             asm <- moduleLLVMAssembly mod
             BS.putStrLn asm
             testFunc <- mangleSymbol compileLayer "add"
-            withModuleSet
+            withModule
               compileLayer
-              [mod]
+              mod
               (SymbolResolver (resolver testFunc compileLayer) nullResolver) $
               \moduleSet -> do
                 mainSymbol <- mangleSymbol compileLayer "add"
