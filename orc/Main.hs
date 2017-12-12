@@ -49,8 +49,8 @@ module_ = defaultModule
 withTestModule :: AST.Module -> (LLVM.Module.Module -> IO a) -> IO a
 withTestModule mod f = withContext $ \context -> withModuleFromAST context mod f
 
-resolver :: MangledSymbol -> IRCompileLayer l -> MangledSymbol -> IO JITSymbol
-resolver testFunc compileLayer symbol
+resolver :: IRCompileLayer l -> MangledSymbol -> IO JITSymbol
+resolver compileLayer symbol
   = findSymbol compileLayer symbol True
 
 nullResolver :: MangledSymbol -> IO JITSymbol
@@ -67,11 +67,10 @@ eagerJit amod =
           withIRCompileLayer objectLayer tm $ \compileLayer -> do
             asm <- moduleLLVMAssembly mod
             BS.putStrLn asm
-            testFunc <- mangleSymbol compileLayer "add"
             withModule
               compileLayer
               mod
-              (SymbolResolver (resolver testFunc compileLayer) nullResolver) $
+              (SymbolResolver (resolver compileLayer) nullResolver) $
               \moduleSet -> do
                 mainSymbol <- mangleSymbol compileLayer "add"
                 JITSymbol mainFn _ <- findSymbol compileLayer mainSymbol True
