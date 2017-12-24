@@ -9,19 +9,35 @@ Description:            Examples using the llvm-hs library
 executable basic
   Main-is:              Main.hs
   hs-source-dirs:       basic
-  build-depends:        
+  build-depends:
     base               >= 4.7,
     mtl                >= 2.2,
     bytestring         >= 0.10,
-    llvm-hs            >= 4.1,
-    llvm-hs-pure       >= 4.1
+    llvm-hs            >= 5.0,
+    llvm-hs-pure       >= 5.0
 
 executable orc
   Main-is:              Main.hs
   hs-source-dirs:       orc
-  build-depends:        
+  build-depends:
     base               >= 4.7,
     mtl                >= 2.2,
     bytestring         >= 0.10,
-    llvm-hs            >= 4.1,
-    llvm-hs-pure       >= 4.1
+    llvm-hs            >= 5.0,
+    llvm-hs-pure       >= 5.0
+
+executable arith
+  Main-is:              Arith.hs
+  hs-source-dirs:       arith
+  build-depends:
+    base               >= 4.7,
+    mtl                >= 2.2,
+    bytestring         >= 0.10,
+    containers,
+    llvm-hs            >= 5.1.2,
+    llvm-hs-pure       >= 5.1,
+    llvm-hs-pretty,
+    deepseq,
+    recursion-schemes,
+    text,
+    transformers
