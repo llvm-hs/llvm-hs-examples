@@ -26,6 +26,17 @@ executable orc
     llvm-hs            >= 5.0,
     llvm-hs-pure       >= 5.0
 
+executable irbuilder
+  Main-is:              Main.hs
+  hs-source-dirs:       irbuilder
+  build-depends:
+    base               >= 4.7,
+    mtl                >= 2.2,
+    bytestring         >= 0.10,
+    llvm-hs            >= 5.0,
+    llvm-hs-pure       >= 5.0,
+    text
+
 executable arith
   Main-is:              Arith.hs
   hs-source-dirs:       arith
