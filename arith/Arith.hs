@@ -20,7 +20,7 @@ import Data.Monoid
 import Data.Text.Lazy (Text)
 import Foreign.Ptr
 
-import qualified Data.ByteString            as BS
+import qualified Data.ByteString.Char8      as BS
 import qualified Data.Map.Strict            as Map
 import qualified Data.Set                   as Set
 import qualified Data.Text.Lazy.IO          as Text
@@ -214,12 +214,7 @@ eval fexpr x = cata alg fexpr
 -- | Helper for calling intrinsics for 'exp', 'log' and friends.
 callDblfun
   :: LLVMIR.MonadIRBuilder m => LLVM.Operand -> LLVM.Operand -> m LLVM.Operand
-callDblfun fun arg = LLVMIR.call funptr [(arg, [])]
-
-  where funptr = case fun of
-          LLVM.ConstantOperand (LLVM.GlobalReference t n) ->
-            LLVM.ConstantOperand (LLVM.GlobalReference (LLVM.ptr t) n)
-          f -> f
+callDblfun fun arg = LLVMIR.call fun [(arg, [])]
 
 xparam :: LLVMIR.ParameterName
 xparam = LLVMIR.ParameterName "x"
