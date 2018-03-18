@@ -26,7 +26,7 @@ simple = buildModule "exampleModule" $ mdo
     br ifExit
     ifElse <- block `named` "if.else"
     flVal <- add a (ConstantOperand (C.Int 32 0))
-    br ifElse
+    br ifExit
     ifExit <- block `named` "if.exit"
     r <- phi [(trVal, ifThen), (flVal, ifElse)]
     ret r
