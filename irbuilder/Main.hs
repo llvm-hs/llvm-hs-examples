@@ -18,7 +18,7 @@ import LLVM.IRBuilder.Instruction
 simple :: Module
 simple = buildModule "exampleModule" $ mdo
   function "f" [(AST.i32, "a")] AST.i32 $ \[a] -> mdo
-    entry <- block `named` "entry"
+    _entry <- block `named` "entry"
     cond <- icmp P.EQ a (ConstantOperand (C.Int 32 0))
     condBr cond ifThen ifElse
     ifThen <- block
@@ -29,6 +29,11 @@ simple = buildModule "exampleModule" $ mdo
     br ifExit
     ifExit <- block `named` "if.exit"
     r <- phi [(trVal, ifThen), (flVal, ifElse)]
+    ret r
+
+  function "plus" [(AST.i32, "x"), (AST.i32, "y")] AST.i32 $ \[x, y] -> do
+    _entry <- block `named` "entry2"
+    r <- add x y
     ret r
 
 main :: IO ()
