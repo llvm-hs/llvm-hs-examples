@@ -1,11 +1,12 @@
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE ForeignFunctionInterface #-}
+
 module Main where
 
 import Control.DeepSeq (NFData, force)
@@ -13,30 +14,34 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Char8 as BS
 import Data.Foldable
 import Data.Functor.Foldable hiding (fold)
+import Data.IORef
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Monoid
+import qualified Data.Set as Set
 import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy.IO as Text
 import Foreign.Ptr
-
-import qualified Data.ByteString.Char8      as BS
-import qualified Data.Map.Strict            as Map
-import qualified Data.Set                   as Set
-import qualified Data.Text.Lazy.IO          as Text
-import qualified LLVM.AST                   as LLVM
-import qualified LLVM.AST.Constant          as LLVM
-import qualified LLVM.AST.Float             as LLVM
-import qualified LLVM.AST.Type              as LLVM
+import qualified LLVM.AST as LLVM
+import qualified LLVM.AST.Constant as LLVM
+import qualified LLVM.AST.Float as LLVM
+import qualified LLVM.AST.Type as LLVM
+import qualified LLVM.CodeGenOpt as CodeGenOpt
+import qualified LLVM.CodeModel as CodeModel
+import qualified LLVM.Context as JIT
 import qualified LLVM.IRBuilder.Instruction as LLVMIR
-import qualified LLVM.IRBuilder.Module      as LLVMIR
-import qualified LLVM.IRBuilder.Monad       as LLVMIR
-import qualified LLVM.Pretty                as LLVMPretty
-import qualified LLVM.Context               as LLVMJIT
-import qualified LLVM.Linking               as LLVMJIT
-import qualified LLVM.Module                as LLVMJIT
-import qualified LLVM.OrcJIT                as LLVMJIT
-import qualified LLVM.Target                as LLVMJIT
+import qualified LLVM.IRBuilder.Module as LLVMIR
+import qualified LLVM.IRBuilder.Monad as LLVMIR
+import qualified LLVM.Internal.OrcJIT.CompileLayer as JIT
+import qualified LLVM.Linking as JIT
+import qualified LLVM.Module as JIT
+import qualified LLVM.OrcJIT as JIT
+import qualified LLVM.Pretty as LLVMPretty
+import qualified LLVM.Relocation as Reloc
+import qualified LLVM.Target as JIT
 
 -- * Core expression type
 
@@ -50,18 +55,30 @@ import qualified LLVM.Target                as LLVMJIT
 --   This type allows us to express the body of a @Double -> Double@ function,
 --   where 'Var' allows us to refer to the (only) argument of the function.
 data ExprF a
-  = Lit Double -- ^ a 'Double' literal
-  | Add a a    -- ^ @a+b@
-  | Sub a a    -- ^ @a-b@
-  | Mul a a    -- ^ @a*b@
-  | Div a a    -- ^ @a/b@
-  | Neg a      -- ^ @-a@
-  | Exp a      -- ^ @'exp' a@
-  | Log a      -- ^ @'log' a@
-  | Sqrt a     -- ^ @'sqrt' a@
-  | Sin a      -- ^ @'sin' a@
-  | Cos a      -- ^ @'cos' a@
-  | Var        -- ^ @'x'@
+  = -- | a 'Double' literal
+    Lit Double
+  | -- | @a+b@
+    Add a a
+  | -- | @a-b@
+    Sub a a
+  | -- | @a*b@
+    Mul a a
+  | -- | @a/b@
+    Div a a
+  | -- | @-a@
+    Neg a
+  | -- | @'exp' a@
+    Exp a
+  | -- | @'log' a@
+    Log a
+  | -- | @'sqrt' a@
+    Sqrt a
+  | -- | @'sin' a@
+    Sin a
+  | -- | @'cos' a@
+    Cos a
+  | -- | @'x'@
+    Var
   deriving (Functor, Foldable, Traversable)
 
 type Expr = Fix ExprF
@@ -88,33 +105,33 @@ neg a = Fix (Neg a)
 
 instance Num Expr where
   fromInteger = lit . fromInteger
-  (+)         = add
-  (-)         = sub
-  (*)         = mul
-  negate      = neg
-  abs         = notImplemented "Expr.abs"
-  signum      = notImplemented "Expr.signum"
+  (+) = add
+  (-) = sub
+  (*) = mul
+  negate = neg
+  abs = notImplemented "Expr.abs"
+  signum = notImplemented "Expr.signum"
 
 divide :: Expr -> Expr -> Expr
 divide a b = Fix (Div a b)
 
 instance Fractional Expr where
-  (/)          = divide
-  recip        = divide 1
+  (/) = divide
+  recip = divide 1
   fromRational = lit . fromRational
 
 instance Floating Expr where
-  pi    = lit pi
-  exp   = Fix . Exp
-  log   = Fix . Log
-  sqrt  = Fix . Sqrt
-  sin   = Fix . Sin
-  cos   = Fix . Cos
-  asin  = notImplemented "Expr.asin"
-  acos  = notImplemented "Expr.acos"
-  atan  = notImplemented "Expr.atan"
-  sinh  = notImplemented "Expr.sinh"
-  cosh  = notImplemented "Expr.cosh"
+  pi = lit pi
+  exp = Fix . Exp
+  log = Fix . Log
+  sqrt = Fix . Sqrt
+  sin = Fix . Sin
+  cos = Fix . Cos
+  asin = notImplemented "Expr.asin"
+  acos = notImplemented "Expr.acos"
+  atan = notImplemented "Expr.atan"
+  sinh = notImplemented "Expr.sinh"
+  cosh = notImplemented "Expr.cosh"
   asinh = notImplemented "Expr.asinh"
   acosh = notImplemented "Expr.acosh"
   atanh = notImplemented "Expr.atanh"
@@ -127,8 +144,8 @@ notImplemented = error . (++ " is not implemented")
 -- | Pretty print an 'Expr'
 pp :: Expr -> String
 pp e = funprefix ++ para ppExpAlg e
-
- where funprefix = "\\x -> "
+  where
+    funprefix = "\\x -> "
 
 printExpr :: MonadIO m => Expr -> m ()
 printExpr expr = liftIO $ do
@@ -149,13 +166,12 @@ ppExpAlg (Mul (e1, a) (e2, b)) =
   paren (isAdd e1 || isSub e1) a ++ " * " ++ paren (isAdd e2 || isSub e2) b
 ppExpAlg (Div (e1, a) (e2, b)) =
   paren (isAdd e1 || isSub e1) a ++ " / " ++ paren (isComplex e2) b
-
-  where isComplex (Fix (Add _ _)) = True
-        isComplex (Fix (Sub _ _)) = True
-        isComplex (Fix (Mul _ _)) = True
-        isComplex (Fix (Div _ _)) = True
-        isComplex               _ = False
-
+  where
+    isComplex (Fix (Add _ _)) = True
+    isComplex (Fix (Sub _ _)) = True
+    isComplex (Fix (Mul _ _)) = True
+    isComplex (Fix (Div _ _)) = True
+    isComplex _ = False
 ppExpAlg (Neg (_, a)) = function "negate" a
 ppExpAlg (Exp (_, a)) = function "exp" a
 ppExpAlg (Log (_, a)) = function "log" a
@@ -166,7 +182,7 @@ ppExpAlg Var = "x"
 
 paren :: Bool -> String -> String
 paren b x
-  | b         = "(" ++ x ++ ")"
+  | b = "(" ++ x ++ ")"
   | otherwise = x
 
 function name arg =
@@ -174,19 +190,19 @@ function name arg =
 
 isAdd :: Expr -> Bool
 isAdd (Fix (Add _ _)) = True
-isAdd               _ = False
+isAdd _ = False
 
 isSub :: Expr -> Bool
 isSub (Fix (Sub _ _)) = True
-isSub               _ = False
+isSub _ = False
 
 isLit :: Expr -> Bool
 isLit (Fix (Lit _)) = True
-isLit             _ = False
+isLit _ = False
 
 isVar :: Expr -> Bool
 isVar (Fix Var) = True
-isVar         _ = False
+isVar _ = False
 
 -- * Simple evaluator
 
@@ -194,26 +210,26 @@ isVar         _ = False
 --   'Num', 'Fractional' and 'Floating' operations.
 eval :: Expr -> (Double -> Double)
 eval fexpr x = cata alg fexpr
-
-  where alg e = case e of
-          Var     -> x
-          Lit d   -> d
-          Add a b -> a + b
-          Sub a b -> a - b
-          Mul a b -> a * b
-          Div a b -> a / b
-          Neg a   -> negate a
-          Exp a   -> exp a
-          Log a   -> log a
-          Sqrt a  -> sqrt a
-          Sin a   -> sin a
-          Cos a   -> cos a
+  where
+    alg e = case e of
+      Var -> x
+      Lit d -> d
+      Add a b -> a + b
+      Sub a b -> a - b
+      Mul a b -> a * b
+      Div a b -> a / b
+      Neg a -> negate a
+      Exp a -> exp a
+      Log a -> log a
+      Sqrt a -> sqrt a
+      Sin a -> sin a
+      Cos a -> cos a
 
 -- * Code generation
 
 -- | Helper for calling intrinsics for 'exp', 'log' and friends.
-callDblfun
-  :: LLVMIR.MonadIRBuilder m => LLVM.Operand -> LLVM.Operand -> m LLVM.Operand
+callDblfun ::
+  LLVMIR.MonadIRBuilder m => LLVM.Operand -> LLVM.Operand -> m LLVM.Operand
 callDblfun fun arg = LLVMIR.call fun [(arg, [])]
 
 xparam :: LLVMIR.ParameterName
@@ -223,22 +239,25 @@ xparam = LLVMIR.ParameterName "x"
 --   executing the given expression and return a mapping from function
 --   name to 'Operand' so that we can very easily refer to those functions
 --   for calling them, when generating the code for the expression itself.
-declarePrimitives
-  :: LLVMIR.MonadModuleBuilder m => Expr -> m (Map String LLVM.Operand)
-declarePrimitives expr = fmap Map.fromList $
-  forM primitives $ \primName -> do
-    f <- LLVMIR.extern (LLVM.mkName ("llvm." <> primName <> ".f64"))
-                       [LLVM.double]
-                       LLVM.double
+declarePrimitives ::
+  LLVMIR.MonadModuleBuilder m => Expr -> m (Map String LLVM.Operand)
+declarePrimitives expr = fmap Map.fromList
+  $ forM primitives
+  $ \primName -> do
+    f <-
+      LLVMIR.extern
+        (LLVM.mkName ("llvm." <> primName <> ".f64"))
+        [LLVM.double]
+        LLVM.double
     return (primName, f)
-
-  where primitives = Set.toList (cata alg expr)
-        alg (Exp ps)  = Set.insert "exp" ps
-        alg (Log ps)  = Set.insert "log" ps
-        alg (Sqrt ps) = Set.insert "sqrt" ps
-        alg (Sin ps)  = Set.insert "sin" ps
-        alg (Cos ps)  = Set.insert "cos" ps
-        alg e         = fold e
+  where
+    primitives = Set.toList (cata alg expr)
+    alg (Exp ps) = Set.insert "exp" ps
+    alg (Log ps) = Set.insert "log" ps
+    alg (Sqrt ps) = Set.insert "sqrt" ps
+    alg (Sin ps) = Set.insert "sin" ps
+    alg (Cos ps) = Set.insert "cos" ps
+    alg e = fold e
 
 -- | Generate an LLVM IR module for the given expression,
 --   including @declare@ statements for the intrinsics and
@@ -251,22 +270,22 @@ codegen fexpr = LLVMIR.buildModule "arith.ll" $ do
     res <- cataM (alg arg prims) fexpr
     LLVMIR.ret res
   return ()
-
-  where alg arg _ (Lit d) =
-          return (LLVM.ConstantOperand $ LLVM.Float $ LLVM.Double d)
-        alg arg _ Var = return arg
-        alg arg _ (Add a b) = LLVMIR.fadd a b `LLVMIR.named` "x"
-        alg arg _ (Sub a b) = LLVMIR.fsub a b `LLVMIR.named` "x"
-        alg arg _ (Mul a b) = LLVMIR.fmul a b `LLVMIR.named` "x"
-        alg arg _ (Div a b) = LLVMIR.fdiv a b `LLVMIR.named` "x"
-        alg arg ps (Neg a) = do
-          z <- alg arg ps (Lit 0)
-          LLVMIR.fsub z a `LLVMIR.named` "x"
-        alg arg ps (Exp a) = callDblfun (ps Map.! "exp") a `LLVMIR.named` "x"
-        alg arg ps (Log a) = callDblfun (ps Map.! "log") a `LLVMIR.named` "x"
-        alg arg ps (Sqrt a) = callDblfun (ps Map.! "sqrt") a `LLVMIR.named` "x"
-        alg arg ps (Sin a) = callDblfun (ps Map.! "sin") a `LLVMIR.named` "x"
-        alg arg ps (Cos a) = callDblfun (ps Map.! "cos") a `LLVMIR.named` "x"
+  where
+    alg arg _ (Lit d) =
+      return (LLVM.ConstantOperand $ LLVM.Float $ LLVM.Double d)
+    alg arg _ Var = return arg
+    alg arg _ (Add a b) = LLVMIR.fadd a b `LLVMIR.named` "x"
+    alg arg _ (Sub a b) = LLVMIR.fsub a b `LLVMIR.named` "x"
+    alg arg _ (Mul a b) = LLVMIR.fmul a b `LLVMIR.named` "x"
+    alg arg _ (Div a b) = LLVMIR.fdiv a b `LLVMIR.named` "x"
+    alg arg ps (Neg a) = do
+      z <- alg arg ps (Lit 0)
+      LLVMIR.fsub z a `LLVMIR.named` "x"
+    alg arg ps (Exp a) = callDblfun (ps Map.! "exp") a `LLVMIR.named` "x"
+    alg arg ps (Log a) = callDblfun (ps Map.! "log") a `LLVMIR.named` "x"
+    alg arg ps (Sqrt a) = callDblfun (ps Map.! "sqrt") a `LLVMIR.named` "x"
+    alg arg ps (Sin a) = callDblfun (ps Map.! "sin") a `LLVMIR.named` "x"
+    alg arg ps (Cos a) = callDblfun (ps Map.! "cos") a `LLVMIR.named` "x"
 
 codegenText :: Expr -> Text
 codegenText = LLVMPretty.ppllvm . codegen
@@ -280,49 +299,61 @@ printCodegen = Text.putStrLn . codegenText
 foreign import ccall "dynamic"
   mkDoubleFun :: FunPtr (Double -> Double) -> (Double -> Double)
 
-resolver
-  :: LLVMJIT.IRCompileLayer l -> LLVMJIT.MangledSymbol -> IO LLVMJIT.JITSymbol
-resolver compileLayer symbol
-  = LLVMJIT.findSymbol compileLayer symbol True
+resolver ::
+  JIT.IRCompileLayer l ->
+  JIT.MangledSymbol ->
+  IO (Either JIT.JITSymbolError JIT.JITSymbol)
+resolver compileLayer symbol =
+  JIT.findSymbol compileLayer symbol True
 
-symbolFromProcess :: LLVMJIT.MangledSymbol -> IO LLVMJIT.JITSymbol
-symbolFromProcess sym = (\addr -> LLVMJIT.JITSymbol addr (LLVMJIT.JITSymbolFlags False True))
-    <$> LLVMJIT.getSymbolAddressInProcess sym
+symbolFromProcess :: JIT.MangledSymbol -> IO JIT.JITSymbol
+symbolFromProcess sym =
+  (\addr -> JIT.JITSymbol addr JIT.defaultJITSymbolFlags)
+    <$> JIT.getSymbolAddressInProcess sym
 
-resolv :: LLVMJIT.IRCompileLayer l -> LLVMJIT.SymbolResolver
-resolv cl = LLVMJIT.SymbolResolver (\sym -> LLVMJIT.findSymbol cl sym True) symbolFromProcess
+resolv :: JIT.IRCompileLayer l -> JIT.SymbolResolver
+resolv cl = JIT.SymbolResolver (\sym -> JIT.findSymbol cl sym True)
 
 printIR :: MonadIO m => ByteString -> m ()
-printIR = liftIO . BS.putStrLn . ("\n*** LLVM IR ***\n\n"<>)
+printIR = liftIO . BS.putStrLn . ("\n*** LLVM IR ***\n\n" <>)
 
 -- | JIT-compile the given 'Expr'ession and use the resulting function.
-withSimpleJIT
-  :: NFData a
-  => Expr
-  -> ((Double -> Double) -> a) -- ^ what to do with the generated functiion
-  -> IO a
-withSimpleJIT expr doFun = LLVMJIT.withContext $ \context -> (>>) (LLVMJIT.loadLibraryPermanently Nothing) $
-  LLVMJIT.withModuleFromAST context (codegen expr) $ \mod' ->
-  LLVMJIT.withHostTargetMachine $ \tm ->
-  LLVMJIT.withObjectLinkingLayer $ \objectLayer ->
-  LLVMJIT.withIRCompileLayer objectLayer tm $ \compileLayer -> do
-    asm <- LLVMJIT.moduleLLVMAssembly mod'
-    printExpr expr
-    printIR asm
-    LLVMJIT.withModule compileLayer mod' (resolv compileLayer) $ \moduleSet -> do
-      fSymbol <- LLVMJIT.mangleSymbol compileLayer "f"
-      LLVMJIT.JITSymbol fnAddr _ <- LLVMJIT.findSymbol compileLayer fSymbol True
-      let f = mkDoubleFun . castPtrToFunPtr $ wordPtrToPtr fnAddr
-      liftIO (putStrLn "*** Result ***\n")
-      evaluate $ force (doFun f)
+withSimpleJIT ::
+  NFData a =>
+  Expr ->
+  -- | what to do with the generated functiion
+  ((Double -> Double) -> a) ->
+  IO a
+withSimpleJIT expr doFun = do
+  resolvers <- newIORef Map.empty
+  JIT.withContext $ \context -> (>>) (JIT.loadLibraryPermanently Nothing)
+    $ JIT.withModuleFromAST context (codegen expr)
+    $ \mod' ->
+      JIT.withHostTargetMachine Reloc.PIC CodeModel.Default CodeGenOpt.Default $ \tm ->
+        JIT.withExecutionSession $ \es ->
+          JIT.withObjectLinkingLayer es (\k -> fmap (\rs -> rs Map.! k) (readIORef resolvers)) $ \objectLayer ->
+            JIT.withIRCompileLayer objectLayer tm $ \compileLayer -> do
+              asm <- JIT.moduleLLVMAssembly mod'
+              printExpr expr
+              printIR asm
+              JIT.withModuleKey es $ \k ->
+                JIT.withModule compileLayer k mod' $ do
+                  fSymbol <- JIT.mangleSymbol compileLayer "f"
+                  Right (JIT.JITSymbol fnAddr _) <- JIT.findSymbol compileLayer fSymbol True
+                  let f = mkDoubleFun . castPtrToFunPtr $ wordPtrToPtr fnAddr
+                  liftIO (putStrLn "*** Result ***\n")
+                  evaluate $ force (doFun f)
 
 -- * Utilities
 
-cataM
-  :: (Monad m, Traversable (Base t), Recursive t)
-  => (Base t a -> m a) -> t -> m a
-cataM alg = c where
-  c = alg <=< traverse c . project
+cataM ::
+  (Monad m, Traversable (Base t), Recursive t) =>
+  (Base t a -> m a) ->
+  t ->
+  m a
+cataM alg = c
+  where
+    c = alg <=< traverse c . project
 
 -- * Main
 
@@ -331,8 +362,8 @@ f t = sin (pi * t / 2) * (1 + sqrt t) ^ 2
 
 main :: IO ()
 main = do
-  let res1 = map f [0..10] :: [Double]
-  res2 <- withSimpleJIT (f x) (\fopt -> map fopt [0..10])
+  let res1 = map f [0 .. 10] :: [Double]
+  res2 <- withSimpleJIT (f x) (\fopt -> map fopt [0 .. 10])
   if res1 == res2
     then putStrLn "results match" >> print res1
     else print res1 >> print res2 >> putStrLn "results don't match"
