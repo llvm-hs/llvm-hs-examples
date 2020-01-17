@@ -1,24 +1,28 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wall #-}
 
 module Main where
 
-import LLVM.AST
-import LLVM.Module
-import LLVM.Target
-import LLVM.Context
-import LLVM.AST.Global
-import LLVM.AST.Constant
-import qualified LLVM.AST as AST
-
-import LLVM.OrcJIT
-
 import Control.Monad.Except
 import qualified Data.ByteString.Char8 as BS
-
+import Data.IORef
 import Data.Int
-import Data.Word
+import qualified Data.Map.Strict as Map
 import Foreign.Ptr
+import LLVM.AST
+import qualified LLVM.AST as AST
+import LLVM.AST.Constant
+import LLVM.AST.Global
+import LLVM.CodeGenOpt
+import LLVM.CodeModel
+import LLVM.Context
+import LLVM.Internal.OrcJIT.CompileLayer
+import LLVM.Module
+import LLVM.OrcJIT
+import LLVM.Relocation
+import LLVM.Target
+import Prelude hiding (mod)
 
 foreign import ccall "dynamic"
   mkMain :: FunPtr (IO Int32) -> IO Int32
@@ -27,55 +31,58 @@ int :: Type
 int = IntegerType 32
 
 defAdd :: Definition
-defAdd = GlobalDefinition functionDefaults
-  { name = Name "add"
-  , parameters = ( [] , False )
-  , returnType = int
-  , basicBlocks = [body]
-  }
+defAdd =
+  GlobalDefinition
+    functionDefaults
+      { name = Name "add",
+        parameters = ([], False),
+        returnType = int,
+        basicBlocks = [body]
+      }
   where
-    body = BasicBlock
+    body =
+      BasicBlock
         (Name "entry")
         []
         (Do $ Ret (Just (ConstantOperand (Int 32 42))) [])
 
-
 module_ :: AST.Module
-module_ = defaultModule
-  { moduleName = "basic"
-  , moduleDefinitions = [defAdd]
-  }
+module_ =
+  defaultModule
+    { moduleName = "basic",
+      moduleDefinitions = [defAdd]
+    }
 
 withTestModule :: AST.Module -> (LLVM.Module.Module -> IO a) -> IO a
 withTestModule mod f = withContext $ \context -> withModuleFromAST context mod f
 
-resolver :: IRCompileLayer l -> MangledSymbol -> IO JITSymbol
-resolver compileLayer symbol
-  = findSymbol compileLayer symbol True
-
-nullResolver :: MangledSymbol -> IO JITSymbol
-nullResolver s = return (JITSymbol 0 (JITSymbolFlags False False))
+resolver :: CompileLayer l => l -> MangledSymbol -> IO (Either JITSymbolError JITSymbol)
+resolver compileLayer symbol = findSymbol compileLayer symbol True
 
 failInIO :: ExceptT String IO a -> IO a
 failInIO = either fail return <=< runExceptT
 
-eagerJit :: AST.Module -> IO Int32
-eagerJit amod =
-    withTestModule amod $ \mod ->
-      withHostTargetMachine $ \tm ->
-        withObjectLinkingLayer $ \objectLayer ->
-          withIRCompileLayer objectLayer tm $ \compileLayer -> do
+eagerJit :: AST.Module -> IO ()
+eagerJit amod = do
+  resolvers <- newIORef Map.empty
+  withTestModule amod $ \mod ->
+    withHostTargetMachine PIC LLVM.CodeModel.Default LLVM.CodeGenOpt.Default $ \tm ->
+      withExecutionSession $ \es ->
+        withObjectLinkingLayer es (\k -> fmap (\rs -> rs Map.! k) (readIORef resolvers)) $ \linkingLayer ->
+          withIRCompileLayer linkingLayer tm $ \compileLayer -> do
+            mainSymbol <- mangleSymbol compileLayer "add"
             asm <- moduleLLVMAssembly mod
             BS.putStrLn asm
-            withModule
-              compileLayer
-              mod
-              (SymbolResolver (resolver compileLayer) nullResolver) $
-              \moduleSet -> do
-                mainSymbol <- mangleSymbol compileLayer "add"
-                JITSymbol mainFn _ <- findSymbol compileLayer mainSymbol True
-                result <- mkMain (castPtrToFunPtr (wordPtrToPtr mainFn))
-                return result
+            withModuleKey es $ \k ->
+              withSymbolResolver es (SymbolResolver (resolver compileLayer)) $ \sresolver -> do
+                modifyIORef' resolvers (Map.insert k sresolver)
+                rsym <- findSymbol compileLayer mainSymbol True
+                case rsym of
+                  Left err -> do
+                    print err
+                  Right (JITSymbol mainFn _) -> do
+                    result <- mkMain (castPtrToFunPtr (wordPtrToPtr mainFn))
+                    print result
 
 main :: IO ()
 main = do

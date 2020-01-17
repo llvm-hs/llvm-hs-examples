@@ -1,54 +1,56 @@
-Name:                   examples
-Version:                1.0.0.0
-Cabal-version:          >=1.8
-Tested-with:            GHC >= 7.8
-Build-type:             Simple
-Synopsis:               Examples using the llvm-hs library
-Description:            Examples using the llvm-hs library
+name:          examples
+version:       1.0.0.0
+cabal-version: >=1.8
+tested-with:   GHC >=7.8
+build-type:    Simple
+synopsis:      Examples using the llvm-hs library
+description:   Examples using the llvm-hs library
 
 executable basic
-  Main-is:              Main.hs
-  hs-source-dirs:       basic
+  main-is:        Main.hs
+  hs-source-dirs: basic
   build-depends:
-    base               >= 4.7,
-    mtl                >= 2.2,
-    bytestring         >= 0.10,
-    llvm-hs            >= 9.0,
-    llvm-hs-pure       >= 9.0
+      base          >=4.7   && <4.14
+    , bytestring    >=0.10  && <0.11
+    , llvm-hs       >=9.0   && <9.1
+    , llvm-hs-pure  >=9.0   && <9.1
+    , mtl           >=2.2.2 && <2.3
 
 executable orc
-  Main-is:              Main.hs
-  hs-source-dirs:       orc
+  main-is:        Main.hs
+  hs-source-dirs: orc
   build-depends:
-    base               >= 4.7,
-    mtl                >= 2.2,
-    bytestring         >= 0.10,
-    llvm-hs            >= 9.0,
-    llvm-hs-pure       >= 9.0
+      base          >=4.7   && <4.14
+    , bytestring    >=0.10  && <0.11
+    , containers    >=0.6   && <0.7
+    , llvm-hs       >=9.0   && <9.1
+    , llvm-hs-pure  >=9.0   && <9.1
+    , mtl           >=2.2.2 && <2.3
 
 executable irbuilder
-  Main-is:              Main.hs
-  hs-source-dirs:       irbuilder
+  main-is:        Main.hs
+  hs-source-dirs: irbuilder
   build-depends:
-    base               >= 4.7,
-    mtl                >= 2.2,
-    bytestring         >= 0.10,
-    llvm-hs            >= 9.0,
-    llvm-hs-pure       >= 9.0,
-    text
+      base            >=4.7   && <4.14
+    , bytestring      >=0.10  && <0.11
+    , llvm-hs         >=9.0   && <9.1
+    , llvm-hs-pretty  >=0.9   && <0.10
+    , llvm-hs-pure    >=9.0   && <9.1
+    , mtl             >=2.2.2 && <2.3
+    , text            >=1.2   && <1.3
 
 executable arith
-  Main-is:              Arith.hs
-  hs-source-dirs:       arith
+  main-is:        Arith.hs
+  hs-source-dirs: arith
   build-depends:
-    base               >= 4.7,
-    mtl                >= 2.2,
-    bytestring         >= 0.10,
-    containers,
-    llvm-hs            >= 9.0,
-    llvm-hs-pure       >= 9.0,
-    llvm-hs-pretty,
-    deepseq,
-    recursion-schemes,
-    text,
-    transformers
+      base               >=4.7   && <4.14
+    , bytestring         >=0.10  && <0.11
+    , containers         >=0.6   && <0.7
+    , deepseq            >=1.4   && <1.5
+    , llvm-hs            >=9.0   && <9.1
+    , llvm-hs-pretty     >=0.9   && <0.10
+    , llvm-hs-pure       >=9.0   && <9.1
+    , mtl                >=2.2.2 && <2.3
+    , recursion-schemes  >=5.1   && <5.2
+    , text               >=1.2   && <1.3
+    , transformers       >=0.5   && <0.6
