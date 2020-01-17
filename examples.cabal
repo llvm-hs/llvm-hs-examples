@@ -1,10 +1,20 @@
 name:          examples
 version:       1.0.0.0
+license:       MIT
+license-file:  LICENSE
 cabal-version: >=1.8
 tested-with:   GHC >=7.8
 build-type:    Simple
-synopsis:      Examples using the llvm-hs library
+maintainer:    Stephen Diehl`
+category:      Compilers
+synopsis:      Examples for the llvm-hs library
 description:   Examples using the llvm-hs library
+extra-source-files:
+  README.md
+
+Source-Repository head
+    type: git
+    location: git@github.com:llvm-hs/llvm-hs-examples.git
 
 executable basic
   main-is:        Main.hs
