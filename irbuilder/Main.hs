@@ -15,6 +15,8 @@ import LLVM.IRBuilder.Module
 import LLVM.IRBuilder.Monad
 import LLVM.IRBuilder.Instruction
 
+import LLVM.Pretty (ppllvm)
+
 simple :: Module
 simple = buildModule "exampleModule" $ mdo
   function "f" [(AST.i32, "a")] AST.i32 $ \[a] -> mdo
@@ -37,4 +39,4 @@ simple = buildModule "exampleModule" $ mdo
     ret r
 
 main :: IO ()
-main = print simple
+main = T.putStrLn (ppllvm simple)

@@ -20,32 +20,32 @@ executable basic
   main-is:        Main.hs
   hs-source-dirs: basic
   build-depends:
-      base          >=4.7   && <4.14
+      base          >=4.7   && <4.15
     , bytestring    >=0.10  && <0.11
-    , llvm-hs       >=9.0   && <9.1
-    , llvm-hs-pure  >=9.0   && <9.1
+    , llvm-hs       >=9.0   && <13.0
+    , llvm-hs-pure  >=9.0   && <13.0
     , mtl           >=2.2.2 && <2.3
 
 executable orc
   main-is:        Main.hs
   hs-source-dirs: orc
   build-depends:
-      base          >=4.7   && <4.14
+      base          >=4.7   && <4.15
     , bytestring    >=0.10  && <0.11
     , containers    >=0.6   && <0.7
-    , llvm-hs       >=9.0   && <9.1
-    , llvm-hs-pure  >=9.0   && <9.1
+    , llvm-hs       >=9.0   && <13.0
+    , llvm-hs-pure  >=9.0   && <13.0
     , mtl           >=2.2.2 && <2.3
 
 executable irbuilder
   main-is:        Main.hs
   hs-source-dirs: irbuilder
   build-depends:
-      base            >=4.7   && <4.14
+      base            >=4.7   && <4.15
     , bytestring      >=0.10  && <0.11
-    , llvm-hs         >=9.0   && <9.1
-    , llvm-hs-pretty  >=0.9   && <0.10
-    , llvm-hs-pure    >=9.0   && <9.1
+    , llvm-hs         >=9.0   && <13.0
+    , llvm-hs-pretty  >=0.9   && <13.0
+    , llvm-hs-pure    >=9.0   && <13.0
     , mtl             >=2.2.2 && <2.3
     , text            >=1.2   && <1.3
 
@@ -53,13 +53,13 @@ executable arith
   main-is:        Arith.hs
   hs-source-dirs: arith
   build-depends:
-      base               >=4.7   && <4.14
+      base               >=4.7   && <4.15
     , bytestring         >=0.10  && <0.11
     , containers         >=0.6   && <0.7
     , deepseq            >=1.4   && <1.5
-    , llvm-hs            >=9.0   && <9.1
-    , llvm-hs-pretty     >=0.9   && <0.10
-    , llvm-hs-pure       >=9.0   && <9.1
+    , llvm-hs            >=9.0   && <13.0
+    , llvm-hs-pretty     >=0.9   && <13.0
+    , llvm-hs-pure       >=9.0   && <13.0
     , mtl                >=2.2.2 && <2.3
     , recursion-schemes  >=5.1   && <5.2
     , text               >=1.2   && <1.3
