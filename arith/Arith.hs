@@ -35,7 +35,7 @@ import qualified LLVM.Context as JIT
 import qualified LLVM.IRBuilder.Instruction as LLVMIR
 import qualified LLVM.IRBuilder.Module as LLVMIR
 import qualified LLVM.IRBuilder.Monad as LLVMIR
-import qualified LLVM.Internal.OrcJIT.CompileLayer as JIT
+import qualified LLVM.Internal.OrcJIT as JIT
 import qualified LLVM.Linking as JIT
 import qualified LLVM.Module as JIT
 import qualified LLVM.OrcJIT as JIT

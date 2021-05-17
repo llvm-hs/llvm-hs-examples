@@ -1,13 +1,12 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main where
 
 import Data.Text.Lazy.IO as T
 
 import LLVM.AST hiding (function)
 import LLVM.AST.Type as AST
-import qualified LLVM.AST.Float as F
+--import qualified LLVM.AST.Float as F
 import qualified LLVM.AST.Constant as C
 import qualified LLVM.AST.IntegerPredicate as P
 
@@ -19,7 +18,7 @@ import LLVM.Pretty (ppllvm)
 
 simple :: Module
 simple = buildModule "exampleModule" $ mdo
-  function "f" [(AST.i32, "a")] AST.i32 $ \[a] -> mdo
+  _function <- function "f" [(AST.i32, "a")] AST.i32 $ \[a] -> mdo
     _entry <- block `named` "entry"
     cond <- icmp P.EQ a (ConstantOperand (C.Int 32 0))
     condBr cond ifThen ifElse
@@ -39,4 +38,6 @@ simple = buildModule "exampleModule" $ mdo
     ret r
 
 main :: IO ()
-main = T.putStrLn (ppllvm simple)
+main = do
+  T.putStrLn (ppllvm simple)
+  print simple
