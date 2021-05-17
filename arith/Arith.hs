@@ -1,13 +1,8 @@
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-
-module Main where
 
 import Control.DeepSeq (NFData, force)
 import Control.Exception
@@ -17,10 +12,8 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.Foldable
 import Data.Functor.Foldable hiding (fold)
-import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Monoid
 import qualified Data.Set as Set
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy.IO as Text
@@ -38,7 +31,8 @@ import qualified LLVM.IRBuilder.Monad as LLVMIR
 import qualified LLVM.Internal.OrcJIT as JIT
 import qualified LLVM.Linking as JIT
 import qualified LLVM.Module as JIT
-import qualified LLVM.OrcJIT as JIT
+import qualified LLVM.PassManager as PM
+--import qualified LLVM.OrcJIT as JIT
 import qualified LLVM.Pretty as LLVMPretty
 import qualified LLVM.Relocation as Reloc
 import qualified LLVM.Target as JIT
@@ -181,10 +175,11 @@ ppExpAlg (Cos (_, a)) = function "cos" a
 ppExpAlg Var = "x"
 
 paren :: Bool -> String -> String
-paren b x
-  | b = "(" ++ x ++ ")"
-  | otherwise = x
+paren b e
+  | b = "(" ++ e ++ ")"
+  | otherwise = e
 
+function :: String -> String -> String
 function name arg =
   name ++ paren True arg
 
@@ -209,10 +204,10 @@ isVar _ = False
 -- | Evaluate an 'Expr'ession using standard
 --   'Num', 'Fractional' and 'Floating' operations.
 eval :: Expr -> (Double -> Double)
-eval fexpr x = cata alg fexpr
+eval fexpr v = cata alg fexpr
   where
     alg e = case e of
-      Var -> x
+      Var -> v
       Lit d -> d
       Add a b -> a + b
       Sub a b -> a - b
@@ -244,12 +239,12 @@ declarePrimitives ::
 declarePrimitives expr = fmap Map.fromList
   $ forM primitives
   $ \primName -> do
-    f <-
+    fn <-
       LLVMIR.extern
         (LLVM.mkName ("llvm." <> primName <> ".f64"))
         [LLVM.double]
         LLVM.double
-    return (primName, f)
+    return (primName, fn)
   where
     primitives = Set.toList (cata alg expr)
     alg (Exp ps) = Set.insert "exp" ps
@@ -261,7 +256,7 @@ declarePrimitives expr = fmap Map.fromList
 
 -- | Generate an LLVM IR module for the given expression,
 --   including @declare@ statements for the intrinsics and
---   a function, always called @f@, that will perform the copoutations
+--   a function, always called @f@, that will perform the cmoputations
 --   described by the 'Expr'ession.
 codegen :: Expr -> LLVM.Module
 codegen fexpr = LLVMIR.buildModule "arith.ll" $ do
@@ -271,21 +266,21 @@ codegen fexpr = LLVMIR.buildModule "arith.ll" $ do
     LLVMIR.ret res
   return ()
   where
-    alg arg _ (Lit d) =
+    alg _   _ (Lit d) =
       return (LLVM.ConstantOperand $ LLVM.Float $ LLVM.Double d)
     alg arg _ Var = return arg
-    alg arg _ (Add a b) = LLVMIR.fadd a b `LLVMIR.named` "x"
-    alg arg _ (Sub a b) = LLVMIR.fsub a b `LLVMIR.named` "x"
-    alg arg _ (Mul a b) = LLVMIR.fmul a b `LLVMIR.named` "x"
-    alg arg _ (Div a b) = LLVMIR.fdiv a b `LLVMIR.named` "x"
+    alg _   _ (Add a b) = LLVMIR.fadd a b `LLVMIR.named` "x"
+    alg _   _ (Sub a b) = LLVMIR.fsub a b `LLVMIR.named` "x"
+    alg _   _ (Mul a b) = LLVMIR.fmul a b `LLVMIR.named` "x"
+    alg _   _ (Div a b) = LLVMIR.fdiv a b `LLVMIR.named` "x"
     alg arg ps (Neg a) = do
       z <- alg arg ps (Lit 0)
       LLVMIR.fsub z a `LLVMIR.named` "x"
-    alg arg ps (Exp a) = callDblfun (ps Map.! "exp") a `LLVMIR.named` "x"
-    alg arg ps (Log a) = callDblfun (ps Map.! "log") a `LLVMIR.named` "x"
-    alg arg ps (Sqrt a) = callDblfun (ps Map.! "sqrt") a `LLVMIR.named` "x"
-    alg arg ps (Sin a) = callDblfun (ps Map.! "sin") a `LLVMIR.named` "x"
-    alg arg ps (Cos a) = callDblfun (ps Map.! "cos") a `LLVMIR.named` "x"
+    alg _   ps (Exp a) = callDblfun (ps Map.! "exp") a `LLVMIR.named` "x"
+    alg _   ps (Log a) = callDblfun (ps Map.! "log") a `LLVMIR.named` "x"
+    alg _   ps (Sqrt a) = callDblfun (ps Map.! "sqrt") a `LLVMIR.named` "x"
+    alg _   ps (Sin a) = callDblfun (ps Map.! "sin") a `LLVMIR.named` "x"
+    alg _   ps (Cos a) = callDblfun (ps Map.! "cos") a `LLVMIR.named` "x"
 
 codegenText :: Expr -> Text
 codegenText = LLVMPretty.ppllvm . codegen
@@ -298,51 +293,68 @@ printCodegen = Text.putStrLn . codegenText
 -- | This allows us to call dynamically loaded functions
 foreign import ccall "dynamic"
   mkDoubleFun :: FunPtr (Double -> Double) -> (Double -> Double)
-
+{-
 resolver ::
   JIT.IRCompileLayer l ->
   JIT.MangledSymbol ->
   IO (Either JIT.JITSymbolError JIT.JITSymbol)
 resolver compileLayer symbol =
   JIT.findSymbol compileLayer symbol True
+-}
 
 symbolFromProcess :: JIT.MangledSymbol -> IO JIT.JITSymbol
 symbolFromProcess sym =
   (\addr -> JIT.JITSymbol addr JIT.defaultJITSymbolFlags)
     <$> JIT.getSymbolAddressInProcess sym
 
-resolv :: JIT.IRCompileLayer l -> JIT.SymbolResolver
-resolv cl = JIT.SymbolResolver (\sym -> JIT.findSymbol cl sym True)
-
 printIR :: MonadIO m => ByteString -> m ()
 printIR = liftIO . BS.putStrLn . ("\n*** LLVM IR ***\n\n" <>)
+
+passes :: PM.PassSetSpec
+passes = PM.defaultCuratedPassSetSpec {PM.optLevel = Just 3}
 
 -- | JIT-compile the given 'Expr'ession and use the resulting function.
 withSimpleJIT ::
   NFData a =>
   Expr ->
-  -- | what to do with the generated functiion
+  -- | what to do with the generated function
   ((Double -> Double) -> a) ->
   IO a
 withSimpleJIT expr doFun = do
-  resolvers <- newIORef Map.empty
+  putStrLn "*** Codegen ***"
+  printCodegen expr
   JIT.withContext $ \context -> (>>) (JIT.loadLibraryPermanently Nothing)
-    $ JIT.withModuleFromAST context (codegen expr)
-    $ \mod' ->
+    $ JIT.withModuleFromAST context (codegen expr) $ \mod' ->
       JIT.withHostTargetMachine Reloc.PIC CodeModel.Default CodeGenOpt.Default $ \tm ->
-        JIT.withExecutionSession $ \es ->
-          JIT.withObjectLinkingLayer es (\k -> fmap (\rs -> rs Map.! k) (readIORef resolvers)) $ \objectLayer ->
-            JIT.withIRCompileLayer objectLayer tm $ \compileLayer -> do
-              asm <- JIT.moduleLLVMAssembly mod'
-              printExpr expr
-              printIR asm
-              JIT.withModuleKey es $ \k ->
-                JIT.withModule compileLayer k mod' $ do
-                  fSymbol <- JIT.mangleSymbol compileLayer "f"
-                  Right (JIT.JITSymbol fnAddr _) <- JIT.findSymbol compileLayer fSymbol True
-                  let f = mkDoubleFun . castPtrToFunPtr $ wordPtrToPtr fnAddr
-                  liftIO (putStrLn "*** Result ***\n")
-                  evaluate $ force (doFun f)
+        JIT.withExecutionSession $ \es -> do
+
+          let dylibName = "myDylib"
+          dylib <- JIT.createJITDylib es dylibName
+
+          JIT.withClonedThreadSafeModule mod' $ \tsm -> do
+            objectLayer <- JIT.createRTDyldObjectLinkingLayer es
+            compileLayer <- JIT.createIRCompileLayer es objectLayer tm
+            JIT.addDynamicLibrarySearchGeneratorForCurrentProcess compileLayer dylib
+            JIT.addModule tsm dylib compileLayer
+
+            asm <- JIT.moduleLLVMAssembly mod'
+            printExpr expr
+            printIR asm
+
+            optimized <- PM.withPassManager passes $ flip PM.runPassManager mod'
+            when optimized $ putStrLn "*** Optimized ***"
+            optasm <- JIT.moduleLLVMAssembly mod'
+            printIR optasm
+
+            sym <- JIT.lookupSymbol es compileLayer dylib "f"
+            case sym of
+              Left (JIT.JITSymbolError err) -> do
+                print err
+                error "Execution aborted"
+              Right (JIT.JITSymbol fnAddr _) -> do
+                let fn =  mkDoubleFun . castPtrToFunPtr $ wordPtrToPtr fnAddr
+                liftIO (putStrLn "*** Result ***\n")
+                evaluate $ force (doFun fn)
 
 -- * Utilities
 
@@ -358,7 +370,7 @@ cataM alg = c
 -- * Main
 
 f :: Floating a => a -> a
-f t = sin (pi * t / 2) * (1 + sqrt t) ^ 2
+f t = sin (pi * t / 2) * (1 + sqrt t) ^ (2 :: Int)
 
 main :: IO ()
 main = do
