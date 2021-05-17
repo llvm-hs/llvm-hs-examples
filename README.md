@@ -12,13 +12,13 @@ LLVM from Haskell.
 * [arith](./arith) - a minimal JIT compiler for functions of one (real) variable using recursion schemes
 * [irbuilder](./irbuilder) - Basic usage of the LLVM IRBuilder for constructing modules
 
-These examples require LLVM 9.0. Check that your installed LLVM version is
+These examples require LLVM 12.0. Check that your installed LLVM version is
 precisely 9.0. If not then follow the install directions in the
 [llvm-hs](https://github.com/llvm-hs/llvm-hs) repository.
 
 ```bash
 $ llvm-config --version
-9.0
+12.0
 ```
 
 To run the examples with Stack:
@@ -52,4 +52,4 @@ License
 -------
 
 MIT License
-Copyright (c) 2017-2020, Stephen Diehl
+Copyright (c) 2017-2021, Stephen Diehl
