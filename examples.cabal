@@ -44,7 +44,7 @@ executable basic
   main-is:        Main.hs
   hs-source-dirs: basic
   build-depends:
-    , bytestring  ^>=0.10
+    , bytestring  ^>=0.11
     , llvm-hs     >=12.0 && <13.0
 
 executable orc
@@ -52,7 +52,7 @@ executable orc
   main-is:        Main.hs
   hs-source-dirs: orc
   build-depends:
-    , bytestring  ^>=0.10
+    , bytestring  ^>=0.11
     , llvm-hs     >=12.0 && <13.0
     , mtl         ^>=2.2
 
@@ -61,7 +61,7 @@ executable irbuilder
   main-is:        Main.hs
   hs-source-dirs: irbuilder
   build-depends:
-    , bytestring      ^>=0.10
+    , bytestring      ^>=0.11
     , llvm-hs-pretty  >=12.0 && <13.0
     , text            ^>=1.2
 
@@ -70,10 +70,11 @@ executable arith
   main-is:        Arith.hs
   hs-source-dirs: arith
   build-depends:
-    , bytestring         ^>=0.10
+    , bytestring         ^>=0.11
     , containers         ^>=0.6
+    , data-fix           ^>=0.3
     , deepseq            ^>=1.4
     , llvm-hs            >=12.0 && <13.0
     , llvm-hs-pretty     >=12.0 && <13.0
-    , recursion-schemes  ^>=5.1
+    , recursion-schemes  ^>=5.2
     , text               ^>=1.2

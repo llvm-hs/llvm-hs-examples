@@ -10,8 +10,9 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
+import Data.Fix
 import Data.Foldable
-import Data.Functor.Foldable hiding (fold)
+import Data.Functor.Foldable (para)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -204,7 +205,7 @@ isVar _ = False
 -- | Evaluate an 'Expr'ession using standard
 --   'Num', 'Fractional' and 'Floating' operations.
 eval :: Expr -> (Double -> Double)
-eval fexpr v = cata alg fexpr
+eval fexpr v = foldFix alg fexpr
   where
     alg e = case e of
       Var -> v
@@ -246,7 +247,7 @@ declarePrimitives expr = fmap Map.fromList
         LLVM.double
     return (primName, fn)
   where
-    primitives = Set.toList (cata alg expr)
+    primitives = Set.toList (foldFix alg expr)
     alg (Exp ps) = Set.insert "exp" ps
     alg (Log ps) = Set.insert "log" ps
     alg (Sqrt ps) = Set.insert "sqrt" ps
@@ -262,7 +263,7 @@ codegen :: Expr -> LLVM.Module
 codegen fexpr = LLVMIR.buildModule "arith.ll" $ do
   prims <- declarePrimitives fexpr
   _ <- LLVMIR.function "f" [(LLVM.double, xparam)] LLVM.double $ \[arg] -> do
-    res <- cataM (alg arg prims) fexpr
+    res <- foldFixM (alg arg prims) fexpr
     LLVMIR.ret res
   return ()
   where
@@ -358,6 +359,7 @@ withSimpleJIT expr doFun = do
 
 -- * Utilities
 
+{-
 cataM ::
   (Monad m, Traversable (Base t), Recursive t) =>
   (Base t a -> m a) ->
@@ -366,6 +368,8 @@ cataM ::
 cataM alg = c
   where
     c = alg <=< traverse c . project
+-}
+
 
 -- * Main
 
