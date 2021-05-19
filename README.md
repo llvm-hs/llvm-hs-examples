@@ -13,7 +13,7 @@ LLVM from Haskell.
 * [irbuilder](./irbuilder) - Basic usage of the LLVM IRBuilder for constructing modules
 
 These examples require LLVM 12.0. Check that your installed LLVM version is
-precisely 9.0. If not then follow the install directions in the
+correct. If not then follow the install directions in the
 [llvm-hs](https://github.com/llvm-hs/llvm-hs) repository.
 
 ```bash
