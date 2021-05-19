@@ -1,11 +1,11 @@
 cabal-version:      2.4
-name:               examples
-version:            1.0.1.0
+name:               llvm-hs-examples
+version:            12.0.0
 license:            MIT
 license-file:       LICENSE
-tested-with:        GHC >=7.8
+tested-with:        GHC >=8.2
 build-type:         Simple
-maintainer:         Stephen Diehl`
+maintainer:         Stephen Diehl
 category:           Compilers
 synopsis:           Examples for the llvm-hs library
 description:        Examples using the llvm-hs library
@@ -17,7 +17,7 @@ source-repository head
 
 common common-options
   build-depends:
-    , base          >=4.7  && <4.16
+    , base          >=4.13
     , llvm-hs-pure  >=12.0 && <13.0
 
   ghc-options:
@@ -44,7 +44,7 @@ executable basic
   main-is:        Main.hs
   hs-source-dirs: basic
   build-depends:
-    , bytestring  ^>=0.11
+    , bytestring  >=0.10
     , llvm-hs     >=12.0 && <13.0
 
 executable orc
@@ -52,29 +52,29 @@ executable orc
   main-is:        Main.hs
   hs-source-dirs: orc
   build-depends:
-    , bytestring  ^>=0.11
+    , bytestring  >=0.10
     , llvm-hs     >=12.0 && <13.0
-    , mtl         ^>=2.2
+    , mtl         >=2.2
 
 executable irbuilder
   import:         common-options
   main-is:        Main.hs
   hs-source-dirs: irbuilder
   build-depends:
-    , bytestring      ^>=0.11
+    , bytestring      >=0.10
     , llvm-hs-pretty  >=12.0 && <13.0
-    , text            ^>=1.2
+    , text            >=1.2
 
 executable arith
   import:         common-options
   main-is:        Arith.hs
   hs-source-dirs: arith
   build-depends:
-    , bytestring         ^>=0.11
-    , containers         ^>=0.6
-    , data-fix           ^>=0.3
-    , deepseq            ^>=1.4
+    , bytestring         >=0.10
+    , containers         >=0.6
+    , data-fix           >=0.3
+    , deepseq            >=1.4
     , llvm-hs            >=12.0 && <13.0
     , llvm-hs-pretty     >=12.0 && <13.0
-    , recursion-schemes  ^>=5.2
-    , text               ^>=1.2
+    , recursion-schemes  >=5.2
+    , text               >=1.2
