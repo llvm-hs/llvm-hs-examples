@@ -1,14 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main where
-
 import LLVM.AST
 import qualified LLVM.AST as AST
 import LLVM.AST.Global
 import LLVM.Context
 import LLVM.Module
 
-import Control.Monad.Except
 import Data.ByteString.Char8 as BS
 
 int :: Type
@@ -44,8 +41,8 @@ module_ = defaultModule
 
 
 toLLVM :: AST.Module -> IO ()
-toLLVM mod = withContext $ \ctx -> do
-  llvm <- withModuleFromAST ctx mod moduleLLVMAssembly
+toLLVM modul = withContext $ \ctx -> do
+  llvm <- withModuleFromAST ctx modul moduleLLVMAssembly
   BS.putStrLn llvm
 
 

@@ -1,66 +1,80 @@
-name:          examples
-version:       1.0.0.0
-license:       MIT
-license-file:  LICENSE
-cabal-version: >=1.8
-tested-with:   GHC >=7.8
-build-type:    Simple
-maintainer:    Stephen Diehl`
-category:      Compilers
-synopsis:      Examples for the llvm-hs library
-description:   Examples using the llvm-hs library
-extra-source-files:
-  README.md
+cabal-version:      2.4
+name:               examples
+version:            1.0.1.0
+license:            MIT
+license-file:       LICENSE
+tested-with:        GHC >=7.8
+build-type:         Simple
+maintainer:         Stephen Diehl`
+category:           Compilers
+synopsis:           Examples for the llvm-hs library
+description:        Examples using the llvm-hs library
+extra-source-files: README.md
 
-Source-Repository head
-    type: git
-    location: git@github.com:llvm-hs/llvm-hs-examples.git
+source-repository head
+  type:     git
+  location: git@github.com:llvm-hs/llvm-hs-examples.git
+
+common common-options
+  build-depends:
+    , base          >=4.7  && <4.16
+    , llvm-hs-pure  >=12.0 && <13.0
+
+  ghc-options:
+    -Wall -Wcompat -Widentities -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints
+    -Wnoncanonical-monad-instances
+
+  if impl(ghc >=8.2)
+    ghc-options: -fhide-source-paths
+
+  if impl(ghc >=8.4)
+    ghc-options: -Wmissing-export-lists -Wpartial-fields
+
+  if impl(ghc >=8.8)
+    ghc-options: -Wmissing-deriving-strategies -fwrite-ide-info -hiedir=.hie
+
+  if impl(ghc >=8.10)
+    ghc-options: -Wunused-packages
+
+  default-language: Haskell2010
 
 executable basic
+  import:         common-options
   main-is:        Main.hs
   hs-source-dirs: basic
   build-depends:
-      base          >=4.7   && <4.14
-    , bytestring    >=0.10  && <0.11
-    , llvm-hs       >=9.0   && <9.1
-    , llvm-hs-pure  >=9.0   && <9.1
-    , mtl           >=2.2.2 && <2.3
+    , bytestring  ^>=0.11
+    , llvm-hs     >=12.0 && <13.0
 
 executable orc
+  import:         common-options
   main-is:        Main.hs
   hs-source-dirs: orc
   build-depends:
-      base          >=4.7   && <4.14
-    , bytestring    >=0.10  && <0.11
-    , containers    >=0.6   && <0.7
-    , llvm-hs       >=9.0   && <9.1
-    , llvm-hs-pure  >=9.0   && <9.1
-    , mtl           >=2.2.2 && <2.3
+    , bytestring  ^>=0.11
+    , llvm-hs     >=12.0 && <13.0
+    , mtl         ^>=2.2
 
 executable irbuilder
+  import:         common-options
   main-is:        Main.hs
   hs-source-dirs: irbuilder
   build-depends:
-      base            >=4.7   && <4.14
-    , bytestring      >=0.10  && <0.11
-    , llvm-hs         >=9.0   && <9.1
-    , llvm-hs-pretty  >=0.9   && <0.10
-    , llvm-hs-pure    >=9.0   && <9.1
-    , mtl             >=2.2.2 && <2.3
-    , text            >=1.2   && <1.3
+    , bytestring      ^>=0.11
+    , llvm-hs-pretty  >=12.0 && <13.0
+    , text            ^>=1.2
 
 executable arith
+  import:         common-options
   main-is:        Arith.hs
   hs-source-dirs: arith
   build-depends:
-      base               >=4.7   && <4.14
-    , bytestring         >=0.10  && <0.11
-    , containers         >=0.6   && <0.7
-    , deepseq            >=1.4   && <1.5
-    , llvm-hs            >=9.0   && <9.1
-    , llvm-hs-pretty     >=0.9   && <0.10
-    , llvm-hs-pure       >=9.0   && <9.1
-    , mtl                >=2.2.2 && <2.3
-    , recursion-schemes  >=5.1   && <5.2
-    , text               >=1.2   && <1.3
-    , transformers       >=0.5   && <0.6
+    , bytestring         ^>=0.11
+    , containers         ^>=0.6
+    , data-fix           ^>=0.3
+    , deepseq            ^>=1.4
+    , llvm-hs            >=12.0 && <13.0
+    , llvm-hs-pretty     >=12.0 && <13.0
+    , recursion-schemes  ^>=5.2
+    , text               ^>=1.2
