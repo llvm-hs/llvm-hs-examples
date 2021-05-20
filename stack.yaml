@@ -14,4 +14,4 @@ flags:
     shared-llvm: true
 
 ghc-options:
-  llvm-hs: -optcxx=-std=c++14
+  llvm-hs: -optcxx=-std=c++14 -optcxx=-lstdc++ -optcxx=-fno-rtti

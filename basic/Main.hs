@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wall -Wno-incomplete-record-updates -Wno-incomplete-uni-patterns #-}
 
 import LLVM.AST
 import qualified LLVM.AST as AST

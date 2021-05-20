@@ -1,6 +1,6 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE OverloadedStrings #-}
-
+{-# OPTIONS_GHC -Wall -Wno-incomplete-record-updates -Wno-incomplete-uni-patterns #-}
 
 import Data.Text.Lazy.IO as T
 

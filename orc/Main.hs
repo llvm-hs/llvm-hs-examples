@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wall -Wno-incomplete-record-updates -Wno-incomplete-uni-patterns #-}
 
 import Control.Monad.Except
 import qualified Data.ByteString.Char8 as BS
@@ -51,9 +51,6 @@ module_ =
 
 withTestModule :: AST.Module -> (LLVM.Module.Module -> IO a) -> IO a
 withTestModule mod f = withContext $ \context -> withModuleFromAST context mod f
-
-failInIO :: ExceptT String IO a -> IO a
-failInIO = either fail return <=< runExceptT
 
 passes :: PassSetSpec
 passes = defaultCuratedPassSetSpec {optLevel = Just 3}

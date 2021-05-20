@@ -61,7 +61,6 @@ executable irbuilder
   main-is:        Main.hs
   hs-source-dirs: irbuilder
   build-depends:
-    , bytestring      >=0.10
     , llvm-hs-pretty  >=12.0 && <13.0
     , text            >=1.2
 

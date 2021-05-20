@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wall -Wno-incomplete-record-updates -Wno-incomplete-uni-patterns #-}
 
 import Control.DeepSeq (NFData, force)
 import Control.Exception
@@ -74,7 +76,7 @@ data ExprF a
     Cos a
   | -- | @'x'@
     Var
-  deriving (Functor, Foldable, Traversable)
+  deriving stock (Functor, Foldable, Traversable)
 
 type Expr = Fix ExprF
 
@@ -192,35 +194,6 @@ isSub :: Expr -> Bool
 isSub (Fix (Sub _ _)) = True
 isSub _ = False
 
-isLit :: Expr -> Bool
-isLit (Fix (Lit _)) = True
-isLit _ = False
-
-isVar :: Expr -> Bool
-isVar (Fix Var) = True
-isVar _ = False
-
--- * Simple evaluator
-
--- | Evaluate an 'Expr'ession using standard
---   'Num', 'Fractional' and 'Floating' operations.
-eval :: Expr -> (Double -> Double)
-eval fexpr v = foldFix alg fexpr
-  where
-    alg e = case e of
-      Var -> v
-      Lit d -> d
-      Add a b -> a + b
-      Sub a b -> a - b
-      Mul a b -> a * b
-      Div a b -> a / b
-      Neg a -> negate a
-      Exp a -> exp a
-      Log a -> log a
-      Sqrt a -> sqrt a
-      Sin a -> sin a
-      Cos a -> cos a
-
 -- * Code generation
 
 -- | Helper for calling intrinsics for 'exp', 'log' and friends.
@@ -294,19 +267,6 @@ printCodegen = Text.putStrLn . codegenText
 -- | This allows us to call dynamically loaded functions
 foreign import ccall "dynamic"
   mkDoubleFun :: FunPtr (Double -> Double) -> (Double -> Double)
-{-
-resolver ::
-  JIT.IRCompileLayer l ->
-  JIT.MangledSymbol ->
-  IO (Either JIT.JITSymbolError JIT.JITSymbol)
-resolver compileLayer symbol =
-  JIT.findSymbol compileLayer symbol True
--}
-
-symbolFromProcess :: JIT.MangledSymbol -> IO JIT.JITSymbol
-symbolFromProcess sym =
-  (\addr -> JIT.JITSymbol addr JIT.defaultJITSymbolFlags)
-    <$> JIT.getSymbolAddressInProcess sym
 
 printIR :: MonadIO m => ByteString -> m ()
 printIR = liftIO . BS.putStrLn . ("\n*** LLVM IR ***\n\n" <>)
@@ -356,20 +316,6 @@ withSimpleJIT expr doFun = do
                 let fn =  mkDoubleFun . castPtrToFunPtr $ wordPtrToPtr fnAddr
                 liftIO (putStrLn "*** Result ***\n")
                 evaluate $ force (doFun fn)
-
--- * Utilities
-
-{-
-cataM ::
-  (Monad m, Traversable (Base t), Recursive t) =>
-  (Base t a -> m a) ->
-  t ->
-  m a
-cataM alg = c
-  where
-    c = alg <=< traverse c . project
--}
-
 
 -- * Main
 
