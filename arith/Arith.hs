@@ -311,9 +311,6 @@ symbolFromProcess sym =
   (\addr -> JIT.JITSymbol addr JIT.defaultJITSymbolFlags)
     <$> JIT.getSymbolAddressInProcess sym
 
-resolv :: JIT.IRCompileLayer l -> JIT.SymbolResolver
-resolv cl = JIT.SymbolResolver (\sym -> JIT.findSymbol cl sym True)
-
 printIR :: MonadIO m => ByteString -> m ()
 printIR = liftIO . BS.putStrLn . ("\n*** LLVM IR ***\n\n" <>)
 
@@ -337,12 +334,14 @@ withSimpleJIT expr doFun = do
               printExpr expr
               printIR asm
               JIT.withModuleKey es $ \k ->
-                JIT.withModule compileLayer k mod' $ do
+                JIT.withSymbolResolver es (JIT.SymbolResolver (resolver compileLayer)) $ \sresolver -> do
                   fSymbol <- JIT.mangleSymbol compileLayer "f"
-                  Right (JIT.JITSymbol fnAddr _) <- JIT.findSymbol compileLayer fSymbol True
-                  let f = mkDoubleFun . castPtrToFunPtr $ wordPtrToPtr fnAddr
-                  liftIO (putStrLn "*** Result ***\n")
-                  evaluate $ force (doFun f)
+                  modifyIORef' resolvers (Map.insert k sresolver)
+                  JIT.withModule compileLayer k mod' $ do
+                    Right (JIT.JITSymbol fnAddr _) <- JIT.findSymbol compileLayer fSymbol True
+                    let f = mkDoubleFun . castPtrToFunPtr $ wordPtrToPtr fnAddr
+                    liftIO (putStrLn "*** Result ***\n")
+                    evaluate $ force (doFun f)
 
 -- * Utilities
 
