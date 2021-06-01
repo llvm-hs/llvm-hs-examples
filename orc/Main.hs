@@ -76,13 +76,14 @@ eagerJit amod = do
             withModuleKey es $ \k ->
               withSymbolResolver es (SymbolResolver (resolver compileLayer)) $ \sresolver -> do
                 modifyIORef' resolvers (Map.insert k sresolver)
-                rsym <- findSymbol compileLayer mainSymbol True
-                case rsym of
-                  Left err -> do
-                    print err
-                  Right (JITSymbol mainFn _) -> do
-                    result <- mkMain (castPtrToFunPtr (wordPtrToPtr mainFn))
-                    print result
+                withModule compileLayer k mod $ do
+                  rsym <- findSymbol compileLayer mainSymbol True
+                  case rsym of
+                    Left err -> do
+                      print err
+                    Right (JITSymbol mainFn _) -> do
+                      result <- mkMain (castPtrToFunPtr (wordPtrToPtr mainFn))
+                      print result
 
 main :: IO ()
 main = do
